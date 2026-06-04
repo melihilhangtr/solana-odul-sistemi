@@ -1,0 +1,1 @@
+- [Token Reward System](token-reward-system.md) — Solana holder tarayıcı + SOL dağıtım sistemi; mimari kararlar ve sharp edge'ler burada.

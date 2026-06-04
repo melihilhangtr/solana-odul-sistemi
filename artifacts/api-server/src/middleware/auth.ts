@@ -1,0 +1,15 @@
+import type { Request, Response, NextFunction } from "express";
+
+declare module "express-session" {
+  interface SessionData {
+    authenticated: boolean;
+  }
+}
+
+export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  if (req.session?.authenticated) {
+    next();
+    return;
+  }
+  res.redirect("/login");
+}

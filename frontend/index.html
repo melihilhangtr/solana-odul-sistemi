@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Token Reward Tracker</title>
+<meta name="description" content="Qualified token holders and SOL reward distribution tracker"/>
+<style>
+  :root {
+    --bg: #0a0d14;
+    --surface: #111520;
+    --surface2: #161b2a;
+    --border: #1e2740;
+    --accent: #6366f1;
+    --accent2: #8b5cf6;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --blue: #38bdf8;
+    --red: #f87171;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --dim: #334155;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* NAV */
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+  }
+  .nav-logo {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .nav-title { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+  .nav-spacer { flex: 1; }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--muted);
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: blink 2s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* HERO */
+  .hero {
+    text-align: center;
+    padding: 60px 24px 40px;
+    background: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(99,102,241,.12) 0%, transparent 70%);
+  }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.25);
+    border-radius: 99px; padding: 4px 14px; font-size: 12px;
+    color: #a5b4fc; margin-bottom: 18px; font-weight: 500;
+  }
+  .hero h1 {
+    font-size: clamp(28px,5vw,48px); font-weight: 800;
+    background: linear-gradient(135deg,#f1f5f9 0%,#a5b4fc 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 12px; letter-spacing: -.02em;
+  }
+  .hero p { color: var(--muted); font-size: 15px; max-width: 480px; margin: 0 auto; }
+
+  /* STATS */
+  .container { max-width: 1000px; margin: 0 auto; padding: 0 24px 60px; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 20px;
+    transition: border-color .2s, transform .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--card-accent, transparent);
+    border-radius: 14px 14px 0 0;
+  }
+  .stat-card:hover { border-color: var(--dim); transform: translateY(-2px); }
+  .stat-card .icon {
+    font-size: 22px; margin-bottom: 10px; display: block;
+  }
+  .stat-card .label {
+    font-size: 11px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .07em; font-weight: 600; margin-bottom: 6px;
+  }
+  .stat-card .value {
+    font-size: 28px; font-weight: 800; font-family: monospace;
+    color: var(--card-color, #f1f5f9);
+    transition: color .3s;
+  }
+  .stat-card .sub {
+    font-size: 11px; color: var(--dim); margin-top: 5px;
+  }
+  .card-green  { --card-accent: var(--green);  --card-color: var(--green);  }
+  .card-yellow { --card-accent: var(--yellow); --card-color: var(--yellow); }
+  .card-blue   { --card-accent: var(--blue);   --card-color: var(--blue);   }
+  .card-purple { --card-accent: var(--accent); --card-color: #a5b4fc; }
+
+  /* SECTION */
+  .section-title {
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .06em;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* TABLE CARD */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .table-card table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table-card th {
+    text-align: left; padding: 12px 16px;
+    color: var(--muted); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .05em;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .table-card td {
+    padding: 11px 16px;
+    border-bottom: 1px solid rgba(30,39,64,.5);
+    color: #cbd5e1; font-family: monospace; font-size: 12px;
+  }
+  .table-card tr:last-child td { border-bottom: none; }
+  .table-card tr:hover td { background: rgba(99,102,241,.04); }
+  .empty { text-align:center; color: var(--dim); padding: 28px 16px !important; font-family: sans-serif !important; }
+
+  /* BADGE */
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 99px;
+    font-size: 11px; font-weight: 600; font-family: sans-serif;
+  }
+  .badge-completed { background: rgba(34,197,94,.12); color: var(--green); border: 1px solid rgba(34,197,94,.25); }
+  .badge-running   { background: rgba(56,189,248,.12); color: var(--blue);  border: 1px solid rgba(56,189,248,.25); }
+  .badge-failed    { background: rgba(248,113,113,.12);color: var(--red);   border: 1px solid rgba(248,113,113,.25); }
+  .badge-pending   { background: rgba(245,158,11,.12); color: var(--yellow);border: 1px solid rgba(245,158,11,.25); }
+
+  /* REFRESH BAR */
+  .refresh-wrap { margin-bottom: 24px; }
+  .refresh-info { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .refresh-info span { font-size:11px; color: var(--muted); }
+  .refresh-bar { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+  .refresh-fill { height:100%; background: var(--accent); border-radius:1px; transition: width .9s linear; }
+
+  /* FOOTER */
+  footer {
+    text-align: center; padding: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--dim); font-size: 12px;
+  }
+
+  /* PULSE SKELETON */
+  .skel { background: var(--border); border-radius: 4px; animation: shimmer 1.5s infinite; }
+  @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* COUNTER ANIMATION */
+  .counting { transition: all .4s ease; }
+
+  @media (max-width: 600px) {
+    nav { padding: 0 16px; }
+    .container { padding: 0 16px 40px; }
+    .hero { padding: 40px 16px 28px; }
+    .stat-card .value { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">⚡</div>
+  <span class="nav-title">Token Reward Tracker</span>
+  <div class="nav-spacer"></div>
+  <div class="live-badge">
+    <div class="live-dot"></div>
+    <span id="lastUpdate">Bağlanıyor…</span>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag">⚡ Canlı Veri</div>
+  <h1>Token Reward Tracker</h1>
+  <p>Qualified token holder sayısını ve otomatik SOL ödül dağıtımlarını canlı takip edin.</p>
+</div>
+
+<div class="container">
+
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card card-green">
+      <span class="icon">👥</span>
+      <div class="label">Qualified Holders</div>
+      <div class="value counting" id="sQualified">—</div>
+      <div class="sub">≥ 500,000 token tutan cüzdanlar</div>
+    </div>
+    <div class="stat-card card-yellow">
+      <span class="icon">💰</span>
+      <div class="label">Toplam Dağıtılan SOL</div>
+      <div class="value counting" id="sTotalSOL">—</div>
+      <div class="sub" id="sDistCount">— dağıtım turu</div>
+    </div>
+    <div class="stat-card card-blue">
+      <span class="icon">📊</span>
+      <div class="label">Aktif Holders</div>
+      <div class="value counting" id="sActive">—</div>
+      <div class="sub">≥ 100 token tutan cüzdanlar</div>
+    </div>
+    <div class="stat-card card-purple">
+      <span class="icon">⏱</span>
+      <div class="label">Tur Başına Ödül</div>
+      <div class="value" id="sRewardAmt">—</div>
+      <div class="sub">her 3 dakikada bir dağıtım</div>
+    </div>
+  </div>
+
+  <!-- REFRESH BAR -->
+  <div class="refresh-wrap">
+    <div class="refresh-info">
+      <span>Otomatik yenileme</span>
+      <span id="countdown">30sn</span>
+    </div>
+    <div class="refresh-bar"><div class="refresh-fill" id="refreshFill" style="width:100%"></div></div>
+  </div>
+
+  <!-- DISTRIBUTIONS TABLE -->
+  <div class="section-title">💸 Son Ödül Dağıtımları</div>
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tarih / Saat</th>
+          <th>Dağıtılan SOL</th>
+          <th>Holder Sayısı</th>
+          <th>Tx Sayısı</th>
+          <th>Durum</th>
+        </tr>
+      </thead>
+      <tbody id="distTable">
+        <tr><td class="empty" colspan="6">Yükleniyor…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SNAPSHOTS TABLE -->
+  <div class="section-title">📸 Son Holder Snapshot'ları</div>
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tarih / Saat</th>
+          <th>Qualified</th>
+          <th>Aktif</th>
+          <th>Toplam Hesap</th>
+        </tr>
+      </thead>
+      <tbody id="snapTable">
+        <tr><td class="empty" colspan="5">Yükleniyor…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<footer>
+  Token Reward Tracker — Veriler her 30 saniyede bir güncellenir
+</footer>
+
+<script>
+// ─────────────────────────────────────────────
+//  ⚙️  BURAYA REPLİT API ADRESINIZI YAZIN
+//  Örnek: https://your-project.replit.app
+// ─────────────────────────────────────────────
+const API_BASE = "https://b73d72f6-557b-40b8-8e61-824b5ecb0bee-00-srmer7keijjp.sisko.replit.dev";
+// ─────────────────────────────────────────────
+
+const REFRESH_S = 30;
+let elapsed = 0;
+const fill = document.getElementById('refreshFill');
+
+function fmt(n) {
+  if (n == null) return '—';
+  return Number(n).toLocaleString('tr-TR');
+}
+function fmtSOL(lamports) {
+  return (Number(lamports) / 1e9).toFixed(6) + ' SOL';
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('tr-TR', {
+    day:'2-digit', month:'2-digit', year:'numeric',
+    hour:'2-digit', minute:'2-digit'
+  });
+}
+function badge(status) {
+  const map = { completed:'badge-completed', running:'badge-running', failed:'badge-failed', pending:'badge-pending' };
+  const cls = map[status] || 'badge-pending';
+  return `<span class="badge ${cls}">${status}</span>`;
+}
+
+async function loadData() {
+  try {
+    const [stats, dists, snaps] = await Promise.all([
+      fetch(`${API_BASE}/api/stats`).then(r => r.json()),
+      fetch(`${API_BASE}/api/reward/distributions?limit=10`).then(r => r.json()),
+      fetch(`${API_BASE}/api/snapshot?limit=8`).then(r => r.json()),
+    ]);
+
+    // Stats
+    const sc = stats.scanner || {};
+    const rw = stats.rewards || {};
+
+    document.getElementById('sQualified').textContent  = fmt(sc.qualifiedCount);
+    document.getElementById('sActive').textContent     = fmt(sc.activeHolders);
+    document.getElementById('sTotalSOL').textContent   = rw.totalDistributedSOL
+      ? parseFloat(rw.totalDistributedSOL).toFixed(4) + ' SOL' : '0 SOL';
+    document.getElementById('sDistCount').textContent  = (rw.distributionCount || 0) + ' dağıtım turu';
+    document.getElementById('sRewardAmt').textContent  = stats.rewardAmountSol > 0
+      ? stats.rewardAmountSol + ' SOL' : '—';
+
+    document.getElementById('lastUpdate').textContent  = 'Güncellendi: ' + new Date().toLocaleTimeString('tr-TR');
+
+    // Distributions
+    const distBody = document.getElementById('distTable');
+    distBody.innerHTML = dists.distributions && dists.distributions.length
+      ? dists.distributions.map(d => `
+          <tr>
+            <td style="color:#6366f1">#${d.id}</td>
+            <td>${fmtDate(d.createdAt)}</td>
+            <td style="color:#f59e0b;font-weight:700">${fmtSOL(d.distributedLamports)}</td>
+            <td>${fmt(d.qualifiedHolderCount)}</td>
+            <td>${fmt(d.txCount)}</td>
+            <td>${badge(d.status)}</td>
+          </tr>`).join('')
+      : '<tr><td class="empty" colspan="6">Henüz dağıtım yapılmadı</td></tr>';
+
+    // Snapshots
+    const snapBody = document.getElementById('snapTable');
+    snapBody.innerHTML = snaps.snapshots && snaps.snapshots.length
+      ? snaps.snapshots.map(s => `
+          <tr>
+            <td style="color:#6366f1">#${s.id}</td>
+            <td>${fmtDate(s.createdAt)}</td>
+            <td style="color:#22c55e;font-weight:700">${fmt(s.qualifiedCount)}</td>
+            <td>${fmt(s.activeHolders)}</td>
+            <td>${fmt(s.totalRawAccounts)}</td>
+          </tr>`).join('')
+      : '<tr><td class="empty" colspan="5">Henüz snapshot alınmadı</td></tr>';
+
+  } catch(e) {
+    document.getElementById('lastUpdate').textContent = '⚠ Bağlantı hatası';
+    console.error('API fetch error:', e);
+  }
+}
+
+// Refresh cycle
+setInterval(() => {
+  elapsed += 100;
+  const remaining = Math.max(0, REFRESH_S - elapsed/1000);
+  document.getElementById('countdown').textContent = Math.ceil(remaining) + 'sn';
+  fill.style.width = ((remaining / REFRESH_S) * 100) + '%';
+  if (elapsed >= REFRESH_S * 1000) {
+    elapsed = 0;
+    fill.style.transition = 'none';
+    fill.style.width = '100%';
+    setTimeout(() => { fill.style.transition = 'width .9s linear'; }, 50);
+    loadData();
+  }
+}, 100);
+
+loadData();
+</script>
+</body>
+</html>
